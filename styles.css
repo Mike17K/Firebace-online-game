@@ -1,0 +1,34 @@
+* {
+    box-sizing:border-box;
+  }
+  
+  html, body {
+    --width: 100px;
+    --height: 100px;
+
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: linear-gradient(180deg, #64BEFF -50%, #6e96ff 69.71%, #2a65ff 150%);
+    font-family: 'Source Sans Pro', sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .player{
+    
+    width: var(--width);
+    height: var(--height);
+
+    position: fixed;
+    top: calc( 50% - var(--height) / 2 );
+    left: calc( 50% - var(--width) / 2 );
+    border: solid 1px rgba(0, 0, 0, 1);
+    border-radius: 50%;
+    background-color: rgb(238, 23, 15);
+  }
+
+  .me{
+    background-color: #55ca40;
+  }
