@@ -1,112 +1,106 @@
-// helper functions
-function randomFromArray(array){
-    return array[Math.floor(Math.random() * array.length)];
-}
-function getKetString(x,y){
-    return `${x}x${y}`;
+import { SubMass } from './SubMass.js';
+
+// =============================================================================
+//local_coords = {'x': width/2 + camera_world_coords.x-player_world_coords.x,'y':height/2 + camera_world_coords.y-player_world_coords.y};   
+function calcRadius(mass){
+    let mass_per_pixel = 0.05;
+    return Math.sqrt(mass/3.14/mass_per_pixel);
 }
 
-function isInScreen(player){
-    // check if the player is in the screen
-    return true;
-}
-function calculateScreenPosition(x){
-    return x
-}
-
-function calcDirection(x,y){
-    if(x==0 && y==0){
-        return {'dx':0,'dy':0};
-    }
-    
-    return {'dx':x/(x*x+y*y),'dy':y/(x*x+y*y)};    
-}
+var WORLD_SIZE_X=3000;
+var WORLD_SIZE_Y=3000;
 
 (function (){
+    
+    const gameContainer = document.querySelector(".game-container");
+
+    let allPlayersRef;
+    let allSubMassesRef;
+    
+    let playerElements = {};
 
     let playerId;
     let playerRef;
-    let playerElements ={};
+    let player_name='Mike';
+    let mass = 1000;
 
-    let playerCoords_x = 0;
-    let playerCoords_y = 0;
-
-    let step = 15;
-
-    let direction_x = 0;
-    let direction_y = 0;
-
-    const gameContainer = document.querySelector(".game-container");
-
-
-    
+    let camera_coords = {"x":0,"y":0};
+    let mouse_coords = {"x":0,"y":0};
 
     function initGame(){
-        const allPlayersRef = firebase.database().ref('players');
 
-        
-
-        function updateFrame(){
-            let dir = calcDirection(direction_x,direction_y);
-            //console.log(dir);
-            playerCoords_x += dir.dx*step;    
-            playerCoords_y -= dir.dy*step;
-
-            playerRef.set({
-                id: playerId,
-                name: "Me",
-                direction: "right",
-                color: "blue",
-                x: playerCoords_x,
-                y: playerCoords_y,
-                mass: 0
-                });
-        }
+        new SubMass(playerId,mass);
+        new SubMass(playerId,mass,{"x":100,"y":20});
     
-        var t=setInterval(updateFrame,10); // run the update method each frame
-   
-        /*
-        var t=setInterval(()=>{
-            var offsetRef = firebase.database().ref("/.info/serverTimeOffset");
-        offsetRef.on("value", function(snapshot) {
-        var offset = snapshot.val();
-        var estimatedServerTimeMs = Date.now() + offset;
-        // Use the estimated server time to calculate the latency
-        console.log("Latency: " + (Date.now() - estimatedServerTimeMs) + "ms");
-        });
-        },500); // run the update method each frame
-        */
-        
-        playerRef.once('value').then(function(snapshot) {
-            const playerData = snapshot.val();
-            playerCoords_x = playerData.x;
-            playerCoords_y = playerData.y;
-          });
+        var frameloop=setInterval(()=>{
 
-        // move agound
-        function updateDir(event){
-            let op = (event.type === 'keydown')?1:-1;
+            for (var id of Object.keys(SubMass.instances)) {
+                let subMass = SubMass.instances[id];
+                
+                // define the force baced on the mouse position
+                
+                let top = (camera_coords.y+subMass.position.y + subMass.radius+window.innerHeight/2 )/window.innerHeight;
+                let left = (camera_coords.x+subMass.position.x -subMass.radius +window.innerWidth/2 )/window.innerWidth;
+                
+                let fx = 1/2-left-subMass.radius/window.innerWidth+mouse_coords.x;
+                let fy = 1/2-top+mouse_coords.y-subMass.radius/window.innerHeight;
+                
+                let force = Math.sqrt(fx*fx+fy*fy);
+
+                let theta;
+                if(fx==0 && fy>0) theta = 3.14/2;
+                if(fx==0 && fy<0) theta = 3*3.14/2;
+                if(fx==0 && fy==0) theta = 0;
+                if(fy>0) theta = Math.atan(fy/fx);
+                if(fy<0) theta = Math.atan(fy/fx);
+                //fix
+
+                console.log(theta);
+
+                subMass.applyForce({
+                    "x":(Math.cos(theta)*force)*10000000,
+                    "y":(Math.sin(theta)*force)*10000000
+                });
+                
+                
+                subMass.move(0.01);
+                
+                if(subMass.position.x >WORLD_SIZE_X) subMass.position.x=WORLD_SIZE_X;
+                 if(subMass.position.x <-WORLD_SIZE_X) subMass.position.x=-WORLD_SIZE_X;
+                 if(subMass.position.y >WORLD_SIZE_Y) subMass.position.y=WORLD_SIZE_Y;
+                 if(subMass.position.y <-WORLD_SIZE_Y) subMass.position.y=-WORLD_SIZE_Y;
+                
+                 
+                subMass.upload();
+            }
             
-            if (event.code === 'KeyW') {
-                // Do something when the W key is pressed
-                direction_y += op*1 ;
-            } 
-            if (event.code === 'KeyA') {
-                // Do something when the A key is pressed
-                direction_x += -1*op ;
-            } 
-            if (event.code === 'KeyS') {
-                // Do something when the S key is pressed
-                direction_y += -1*op ;              
-            } 
-            if (event.code === 'KeyD') {
-                // Do something when the D key is pressed
-                direction_x += 1*op ;
-            } 
-        }
-        document.addEventListener('keydown',(event) => updateDir(event) );
-        document.addEventListener('keyup',(event) => updateDir(event) );
+        },10); 
+   
+
+        document.addEventListener('mousemove', (event) => {
+            mouse_coords.x = event.clientX / window.innerWidth-1/2;
+            mouse_coords.y = event.clientY / window.innerHeight-1/2;       
+          });
       
+        
+        allSubMassesRef.on('value',(snapshot) => {
+            // fires whenever a change occurs
+            const subMasses = snapshot.val();
+                for (let subMass in subMasses) {
+                    let tmp_subMass = subMasses[subMass];
+                    
+                    const target_element = document.querySelector(`.${tmp_subMass.id}`);
+                    
+                    // change something if u want                
+                    target_element.style.width = tmp_subMass.radius/window.innerWidth*100*2+'vw';
+                    target_element.style.height = tmp_subMass.radius/window.innerWidth*100*2+'vw';
+                    
+                    target_element.style.left = (camera_coords.x+tmp_subMass.x -tmp_subMass.radius +window.innerWidth/2 )/window.innerWidth*100 +'vw';
+                    target_element.style.top =  (camera_coords.y+tmp_subMass.y +tmp_subMass.radius+window.innerHeight/2 )/window.innerHeight*100 +'vh';
+                    target_element.style.display = 'block';
+                }
+
+        });
 
         allPlayersRef.on('value',(snapshot) => {
             // fires whenever a change occurs
@@ -114,33 +108,22 @@ function calcDirection(x,y){
             
             for (let playerId in players) {
                 let tmp_player = players[playerId];
-                
-                if(isInScreen(tmp_player)){
-                    // update the players position
-                    let new_x = calculateScreenPosition(tmp_player.x);
-                    let new_y = calculateScreenPosition(tmp_player.y);
-                    
-                    const target_element = document.querySelector(`.${tmp_player.id}`);
-                    //console.log(new_x,new_y);
-                    //target_element.style.transform = `translate3d(${new_x}, ${new_y}, 0)`;
-                    target_element.style.left = new_x+"px";
-                    target_element.style.top = new_y+"px";
-                }
-                
+                const target_element = document.querySelector(`.${tmp_player.id}`);
+                // change something if u want                
             }
 
         });
 
-        allPlayersRef.on('child_removed', (removed_player) => {
+        function divRemove(removed_player){
             console.log('Player disconnected:', removed_player.key);
             
             const target_element = document.querySelector(`.${removed_player.key}`);
             target_element.parentElement.removeChild(target_element);
-        });
+        }
+        allSubMassesRef.on('child_removed', divRemove);
+        allPlayersRef.on('child_removed', divRemove);
 
-        allPlayersRef.on('child_added',(snapshot) => {
-            console.log("added");
-            // fires whenever a node is added to the tree
+        function onMassAdded(snapshot) {
             const addedPlayer = snapshot.val();
             const characterElement = document.createElement('div');
             characterElement.classList.add("player",`${addedPlayer.id}`);
@@ -163,33 +146,37 @@ function calcDirection(x,y){
             characterElement.querySelector(".Character_name").innerHTML = addedPlayer.name;
             characterElement.querySelector(".Character_mass").innerHTML = addedPlayer.mass;
             characterElement.setAttribute("data-color",addedPlayer.color);
-            characterElement.setAttribute("data-direction",addedPlayer.direction);
 
             gameContainer.appendChild(characterElement);
-        });
+        }
+
+        allSubMassesRef.on('child_added',onMassAdded);
+        //allPlayersRef.on('child_added',onMassAdded);
+
     };
 
 
+    // =============================================================================
+    // =============================================================================
+    // =============================================================================
+
     firebase.auth().onAuthStateChanged((user)=>{
-        //console.log(user); 
         if(user){
             // your lgged in
             playerId = user.uid;
             playerRef = firebase.database().ref(`players/${playerId}`);
 
+            allPlayersRef = firebase.database().ref('players');     
+            allSubMassesRef = firebase.database().ref('submasses');    
+            
             playerRef.set({
                 id: playerId,
-                name: "Me",
-                direction: "right",
-                color: "blue",
-                x: playerCoords_x,
-                y: playerCoords_y,
-                mass: 0
+                name: player_name,
+                color: 'blue',
+                mass
                 });
                 
             playerRef.onDisconnect().remove();
-
-            console.log("User is signed in correctly");
             initGame()
         }else{
             //yout logged out
@@ -202,5 +189,5 @@ function calcDirection(x,y){
         console.log(error.code, error.message);
     });
 
-
 })();
+
