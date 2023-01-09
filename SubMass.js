@@ -8,7 +8,7 @@ export class SubMass {
       this.force = force;
 
       this.name = name;
-      this.radius = Math.sqrt(this.mass/3.14/0.05);
+      this.radius = this.mass/3.14;
     
       this.id = `${parentId}-${Object.keys(SubMass.instances).length}`;
       this.subMassRef = firebase.database().ref(`submasses/${this.id}`);
@@ -27,8 +27,8 @@ export class SubMass {
         // b = 3.14 * r * r
         // a.x = ΣF.x / m = ( Force.x - b * velocity.x ) / m 
         // a.y = ΣF.y / m = ( Force.y - b * velocity.y ) / m 
-        this.radius = Math.sqrt(this.mass/3.14/0.05);
-        let b = 15*3.14 * this.radius; // air resistance
+        this.radius = this.mass/3.14;
+        let b = 15*3.14 * this.radius ; // air resistance
         let acceleration = {
             "x":( this.force.x - b * this.velocity.x ) / this.mass ,
             "y":( this.force.y - b * this.velocity.y ) / this.mass
@@ -46,6 +46,7 @@ export class SubMass {
     }
 
     upload(){
+        console.log(this.radius);
         this.subMassRef.set({
             color: 'blue',
             id: this.id,

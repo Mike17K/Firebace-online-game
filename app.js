@@ -2,13 +2,9 @@ import { SubMass } from './SubMass.js';
 
 // =============================================================================
 //local_coords = {'x': width/2 + camera_world_coords.x-player_world_coords.x,'y':height/2 + camera_world_coords.y-player_world_coords.y};   
-function calcRadius(mass){
-    let mass_per_pixel = 0.05;
-    return Math.sqrt(mass/3.14/mass_per_pixel);
-}
 
-var WORLD_SIZE_X=3000;
-var WORLD_SIZE_Y=3000;
+var WORLD_SIZE_X=30000;
+var WORLD_SIZE_Y=30000;
 
 (function (){
     
@@ -22,7 +18,9 @@ var WORLD_SIZE_Y=3000;
     let playerId;
     let playerRef;
     let player_name='Mike';
-    let mass = 1000;
+    let mass = 100;
+
+    let MAX_FORCE=0.1;
 
     let camera_coords = {"x":0,"y":0};
     let mouse_coords = {"x":0,"y":0};
@@ -30,7 +28,9 @@ var WORLD_SIZE_Y=3000;
     function initGame(){
 
         new SubMass(playerId,mass);
-        new SubMass(playerId,mass,{"x":100,"y":20});
+        new SubMass(playerId,100,{'x':200,'y':0});
+        new SubMass(playerId,1000,{'x':200,'y':0});
+        
     
         var frameloop=setInterval(()=>{
 
@@ -45,17 +45,18 @@ var WORLD_SIZE_Y=3000;
                 let fx = 1/2-left-subMass.radius/window.innerWidth+mouse_coords.x;
                 let fy = 1/2-top+mouse_coords.y-subMass.radius/window.innerHeight;
                 
-                let force = Math.sqrt(fx*fx+fy*fy);
+                let force = Math.sqrt(fx*fx+fy*fy) *40/subMass.radius;
+                if (force>MAX_FORCE) {
+                    force=MAX_FORCE; 
+                }
 
                 let theta;
                 if(fx==0 && fy>0) theta = 3.14/2;
                 if(fx==0 && fy<0) theta = 3*3.14/2;
                 if(fx==0 && fy==0) theta = 0;
-                if(fy>0) theta = Math.atan(fy/fx);
-                if(fy<0) theta = Math.atan(fy/fx);
+                if(fx>0) theta = Math.atan(fy/fx);
+                if(fx<0) theta = 3.14+Math.atan(fy/fx);
                 //fix
-
-                console.log(theta);
 
                 subMass.applyForce({
                     "x":(Math.cos(theta)*force)*10000000,
