@@ -1,3 +1,13 @@
+let pixelratio = 1; // this is the ratio of the world pixels to the screen pixels
+
+function localToWorld(coords){
+    return coords/pixelratio;
+};
+function worldToLocal(coords){
+    return coords*pixelratio;
+};
+
+
 export class SubMass {
     static instances = {};
 
@@ -24,6 +34,7 @@ export class SubMass {
     }
 
     move(dt){  
+        this.calculateColision();
         // b = 3.14 * r * r
         // a.x = ΣF.x / m = ( Force.x - b * velocity.x ) / m 
         // a.y = ΣF.y / m = ( Force.y - b * velocity.y ) / m 
@@ -46,7 +57,6 @@ export class SubMass {
     }
 
     upload(){
-        console.log(this.radius);
         this.subMassRef.set({
             color: 'blue',
             id: this.id,
@@ -59,9 +69,36 @@ export class SubMass {
     }
 
     calculateColision(){
+        let MAX_COLISION_FORCE = 1000;
+        let isColiding = false;
+        let newForce = {'x':0, 'y':0};
+        Object.keys(SubMass.instances).forEach((subMass_key)=>{
+            const e = SubMass.instances[subMass_key];
+            const distance = Math.sqrt(Math.pow(this.position.x-e.position.x, 2) + Math.pow(this.position.y-e.position.y,2));
+            //console.log(distance);
+            if(distance<this.radius+e.radius && e.id!=this.id){
+                //console.log("Colision");
+                isColiding=true;
 
+                let xfactor = (this.position.x-e.position.x)*5;
+                let yfactor = (this.position.y-e.position.y)*5;
+
+                if(xfactor>MAX_COLISION_FORCE){
+                    newForce.x += MAX_COLISION_FORCE;
+                }else{
+                    newForce.x += xfactor;
+                }
+                
+                if(yfactor>MAX_COLISION_FORCE){
+                    newForce.y += MAX_COLISION_FORCE;
+                }else{
+                    newForce.y += yfactor;
+                }
+            }
+        });
+
+        this.force.x += newForce.x*1000000/this.mass;
+        this.force.y += newForce.y*1000000/this.mass;
     }
 
   }
-
-  

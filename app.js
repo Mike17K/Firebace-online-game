@@ -7,6 +7,14 @@ var WORLD_SIZE_X=30000;
 var WORLD_SIZE_Y=30000;
 
 (function (){
+    let pixelratio = 1; // this is the ratio of the world pixels to the screen pixels
+
+    function localToWorld(coords){
+        return coords/pixelratio;
+    };
+    function worldToLocal(coords){
+        return coords*pixelratio;
+    };
     
     const gameContainer = document.querySelector(".game-container");
 
@@ -20,15 +28,20 @@ var WORLD_SIZE_Y=30000;
     let player_name='Mike';
     let mass = 100;
 
-    let MAX_FORCE=0.1;
+    let MAX_FORCE=150;
 
     let camera_coords = {"x":0,"y":0};
-    let mouse_coords = {"x":0,"y":0};
+    let mouse_coords_local = {"x":0,"y":0};
 
     function initGame(){
 
         new SubMass(playerId,mass);
-        new SubMass(playerId,100,{'x':200,'y':0});
+        new SubMass(playerId,mass);
+        new SubMass(playerId,mass);
+        new SubMass(playerId,mass);
+        new SubMass(playerId,mass);
+        new SubMass(playerId,mass);
+        new SubMass(playerId,mass);
         new SubMass(playerId,1000,{'x':200,'y':0});
         
     
@@ -37,16 +50,14 @@ var WORLD_SIZE_Y=30000;
             for (var id of Object.keys(SubMass.instances)) {
                 let subMass = SubMass.instances[id];
                 
-                // define the force baced on the mouse position
+
+                let fx = localToWorld(mouse_coords_local.x)-subMass.position.x;
+                let fy = localToWorld(mouse_coords_local.y)-subMass.position.y;
                 
-                let top = (camera_coords.y+subMass.position.y + subMass.radius+window.innerHeight/2 )/window.innerHeight;
-                let left = (camera_coords.x+subMass.position.x -subMass.radius +window.innerWidth/2 )/window.innerWidth;
                 
-                let fx = 1/2-left-subMass.radius/window.innerWidth+mouse_coords.x;
-                let fy = 1/2-top+mouse_coords.y-subMass.radius/window.innerHeight;
-                
-                let force = Math.sqrt(fx*fx+fy*fy) *40/subMass.radius;
+                let force = Math.sqrt(fx*fx+fy*fy)*4;
                 if (force>MAX_FORCE) {
+                    //console.log(force);
                     force=MAX_FORCE; 
                 }
 
@@ -59,12 +70,12 @@ var WORLD_SIZE_Y=30000;
                 //fix
 
                 subMass.applyForce({
-                    "x":(Math.cos(theta)*force)*10000000,
-                    "y":(Math.sin(theta)*force)*10000000
+                    "x":(Math.cos(theta)*force)*10000,
+                    "y":(Math.sin(theta)*force)*10000
                 });
                 
                 
-                subMass.move(0.01);
+                subMass.move(0.001);
                 
                 if(subMass.position.x >WORLD_SIZE_X) subMass.position.x=WORLD_SIZE_X;
                  if(subMass.position.x <-WORLD_SIZE_X) subMass.position.x=-WORLD_SIZE_X;
@@ -75,12 +86,12 @@ var WORLD_SIZE_Y=30000;
                 subMass.upload();
             }
             
-        },10); 
+        },1); 
    
 
         document.addEventListener('mousemove', (event) => {
-            mouse_coords.x = event.clientX / window.innerWidth-1/2;
-            mouse_coords.y = event.clientY / window.innerHeight-1/2;       
+            mouse_coords_local.x = event.clientX - window.innerWidth/2;
+            mouse_coords_local.y = event.clientY - window.innerHeight/2;       
           });
       
         
@@ -93,11 +104,11 @@ var WORLD_SIZE_Y=30000;
                     const target_element = document.querySelector(`.${tmp_subMass.id}`);
                     
                     // change something if u want                
-                    target_element.style.width = tmp_subMass.radius/window.innerWidth*100*2+'vw';
-                    target_element.style.height = tmp_subMass.radius/window.innerWidth*100*2+'vw';
+                    target_element.style.width = 2*worldToLocal(tmp_subMass.radius)+'px';
+                    target_element.style.height = 2*worldToLocal(tmp_subMass.radius)+'px';
                     
-                    target_element.style.left = (camera_coords.x+tmp_subMass.x -tmp_subMass.radius +window.innerWidth/2 )/window.innerWidth*100 +'vw';
-                    target_element.style.top =  (camera_coords.y+tmp_subMass.y +tmp_subMass.radius+window.innerHeight/2 )/window.innerHeight*100 +'vh';
+                    target_element.style.left = worldToLocal(camera_coords.x+tmp_subMass.x -tmp_subMass.radius) + window.innerWidth/2 +'px';
+                    target_element.style.top =  worldToLocal(camera_coords.y+tmp_subMass.y -tmp_subMass.radius) + window.innerHeight/2 +'px';
                     target_element.style.display = 'block';
                 }
 
@@ -191,4 +202,3 @@ var WORLD_SIZE_Y=30000;
     });
 
 })();
-
